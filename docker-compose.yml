@@ -1,0 +1,17 @@
+version: '3.3'
+
+services:
+  webapi:
+    build: ./flask
+    ports:
+      - "5001:5001"
+    volumes:
+      - ./app:/app
+    restart: always
+
+  db:
+    image: redis:5.0.1-alpine3.8
+    volumes:
+      - ./redis-data:/data
+    restart: always
+
