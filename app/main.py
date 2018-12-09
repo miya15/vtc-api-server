@@ -57,6 +57,14 @@ def require_apikey():
     return _require_apikey
 
 
+@app.route("/api/echo", methods=['GET'])
+def getEcho():
+    result = {
+        "message": "hello"
+    }
+    return make_response(jsonify(result))
+
+
 @app.route("/api/state", methods=['GET'])
 @content_type('application/json')
 @require_apikey()
@@ -108,7 +116,7 @@ def getUrl():
 @app.route("/api/ssh-request", methods=['GET'])
 @content_type('application/json')
 @require_apikey()
-def getUrl():
+def getSshRequest():
     # get ssh-request
     keyUrl = "ssh-request"
     dbc = getDBC()
@@ -121,5 +129,3 @@ def getUrl():
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5001, debug=True)
-
-
