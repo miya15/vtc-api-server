@@ -2,9 +2,12 @@ from flask import Flask, jsonify, request, make_response
 import json
 import redis
 import functools
+import logging
 
 app = Flask(__name__)
 g_dbc = None
+
+logging.basicConfig(filename='/app/server.log', level=logging.ERROR)
 
 
 # get database connection
@@ -39,14 +42,28 @@ def require_apikey():
             # fetch apikey list
             apikeys = dbc.lrange("apikeys", 0, -1)
             # check api key.
-            requestApikey = request.headers.get("x-api-key")
-            if bytes(requestApikey.encode('utf-8')) not in apikeys:
+            requestApiKey = ""
+            try:
+                requestData = json.loads(request.data)
+                logging.debug("body is json format")
+                if "x-api-key" in requestData:
+                    requestApiKey = requestData["x-api-key"]
+                    logging.debug("x-api-key ok")
+            except json.JSONDecodeError:
+                logging.debug("body is not json format.")
+                requestApiKey = ""
+
+            if len(requestApiKey) == 0:
+                requestApiKey = request.headers.get("x-api-key")
+
+            if bytes(requestApiKey.encode('utf-8')) not in apikeys:
                 error_message = {
                     "Error": "Invalid api key."
                 }
+                logging.debug("Invalid api key.")
                 return make_response(jsonify(error_message), 401)
             # add count
-            keyCount = "count-" + requestApikey
+            keyCount = "count-" + requestApiKey
             count = dbc.get(keyCount)
             if count == None:
                 count = "0"
@@ -83,19 +100,23 @@ def getState():
 @content_type('application/json')
 @require_apikey()
 def putState():
-    # set state
-    requestData = json.loads(request.data)
-    if "value" not in requestData:
-        error = {
-            "Error": "Invalid request parameters."
+    try:
+        logging.debug("start putState()")
+        # set state
+        requestData = json.loads(request.data)
+        if "value" not in requestData:
+            error = {
+                "Error": "Invalid request parameters."
+            }
+            return make_response(jsonify(error), 400)
+        keyState = "state"
+        dbc = getDBC()
+        dbc.set(keyState, requestData["value"])
+        result = {
+            "result": "OK"
         }
-        return make_response(jsonify(error), 400)
-    keyState = "state"
-    dbc = getDBC()
-    dbc.set(keyState, requestData["value"])
-    result = {
-        "result": "OK"
-    }
+    except Exception as e:
+        logging.debug(e.args)
     return make_response(jsonify(result))
 
 
